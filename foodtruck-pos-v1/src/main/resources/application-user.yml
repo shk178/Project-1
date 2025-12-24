@@ -1,0 +1,15 @@
+#환경과 무관
+#일반 사용자 설정
+spring:
+  config:
+    activate:
+      on-profile: user
+  sql:
+    init:
+      data-locations: classpath*:data-user-mode.sql
+
+app:
+  role: user
+  page-size: 10
+  user:
+    allow-refund: false

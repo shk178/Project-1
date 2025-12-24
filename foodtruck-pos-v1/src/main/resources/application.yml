@@ -1,0 +1,21 @@
+#공통 + 기본 진입점
+#모든 환경에서 공통으로 쓰는 설정
+#어떤 프로파일 조합을 쓸지 정의
+#--spring.profiles.active=admin-dev
+spring:
+  application:
+    name: foodtruck-pos-v1
+
+  profiles:
+    active: dev
+    group:
+      admin-dev: dev,admin
+      user-dev: dev,user
+      admin-test: test,admin
+      user-test: test,user
+      admin-prod: prod,admin
+      user-prod: prod,user
+
+logging:
+  level:
+    root: INFO

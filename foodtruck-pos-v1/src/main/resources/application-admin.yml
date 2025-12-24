@@ -1,0 +1,16 @@
+#환경과 무관
+#admin 기능 전용 설정
+spring:
+  config:
+    activate:
+      on-profile: admin
+  sql:
+    init:
+      data-locations: classpath*:data-admin-mode.sql
+
+app:
+  role: admin
+  page-size: 50
+  admin:
+    allow-delete: true
+    allow-refund: true
