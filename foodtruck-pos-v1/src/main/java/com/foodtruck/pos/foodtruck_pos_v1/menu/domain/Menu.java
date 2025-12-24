@@ -1,10 +1,12 @@
 package com.foodtruck.pos.foodtruck_pos_v1.menu.domain;
 
 import com.foodtruck.pos.foodtruck_pos_v1.menuitem.domain.MenuItem;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.util.List;
 
+@Builder
 @Getter
 public class Menu {
     private int menuId;
