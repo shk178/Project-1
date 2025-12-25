@@ -42,7 +42,10 @@ public class OrderPlaceService {
                 orderNo, Order.State.ORDER_RECEIVED,
                 orderDate, orderItems, waitingNo
         );
-
+        // 결제 인증(사용 가능한 카드인지) 요청
+        PaymentAuthenticationResult authenticationResult = paymentRequestService.requestPaymentAuthentication(orderNo, order.getTotalAmount());
+        // 결제 인증 요청 성공 시 주문 접수
+        order.place(authenticationResult.paymentKey());
         return orderRepository.save(order);
     }
 

@@ -26,6 +26,10 @@ public class Order {
         this.totalAmount = calculateTotalAmount(orderItems);
     }
 
+    public void place(String paymentKey) {
+        EventPublisher.publish(new OrderPlacedEvent(paymentKey, orderNo, totalAmount));
+    }
+
     private State validateOrderState(State orderState) {
         Objects.requireNonNull(orderState, "주문 상태는 필수입니다");
         return orderState;

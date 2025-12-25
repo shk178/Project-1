@@ -1,8 +1,11 @@
 package com.foodtruck.pos.foodtruck_pos_v1.payment.domain;
 
+import com.foodtruck.pos.foodtruck_pos_v1.common.vo.Money;
 import com.foodtruck.pos.foodtruck_pos_v1.order.domain.OrderNo;
+import lombok.Builder;
 import lombok.Getter;
 
+@Builder(builderMethodName = "innerBuilder")
 @Getter
 public class Payment {
     private long paymentId;
@@ -10,6 +13,14 @@ public class Payment {
     private OrderNo orderNo;
     private Money amount;
     private State state;
+
+    public static PaymentBuilder builder(String paymentKey, OrderNo orderNo, Money amount, State state) {
+        return innerBuilder()
+                .paymentKey(paymentKey)
+                .orderNo(orderNo)
+                .amount(amount)
+                .state(state);
+    }
 
     @Getter
     public enum State {

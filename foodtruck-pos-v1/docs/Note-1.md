@@ -406,3 +406,87 @@ CartItem updatedCartItem = updateCartItemQuantity(newItem);
 ## orderItems.forEach 대신 배치도 가능
 - jdbcTemplate에서는 지원된다.
 ## printOrderDetails를 템플릿으로 작성해도 된다.
+---
+## 결제 로직
+https://www.tosspayments.com/blog/articles/semo-16
+### VAN Value Added Network
+- 소비자=>가맹점=>VAN(중계)=>8개 카드사
+- 카드단말기, POS단말기가 VAN 기반이다.
+- VAN은 데이터 연결만 하고 카드사는 VAN에 사용료 따로 지급하고 카드사는 가맹점에 매출액을 따로 지급한다.
+- POS 단말기나 매출 장부 서비스 등 추가 서비스 사용x면 8개 카드사로부터 가맹점이 매출 내역을 챙겨야 한다. 각각 다른 날짜에 매출액을 입금받는다.
+### PG Payments Gateway
+- 소비자=>가맹점=>PG=>VAN=>카드사
+- PG, VAN은 모두 중계 역할 한다.
+- 카드사는 가맹점에서 발생한 매출액을 PG에 지급하고 PG는 여기에 대한 정산 역할을 한다.
+- 즉 pg는 가맹점에 PC 수수료를 정산해 매출액을 지급한다. (매출 정산 서비스)
+- PG사는 가맹점과 계약한 정산일에 맞춰 한 번에 매출액을 정산해준다.
+### van, pg
+- VAN은 카드 수수료만 내면 되는데 PG는 수수료가 비싸다.
+- PG사를 거치면 카드 수수료는 PG사가 낸다. 카드 정산도 PG사가 받고.. 이런 것에 대한 수수료를 받는다.
+- PG사는 토스페이먼츠, KG이니시스, 나이스페이먼츠, NHN한국사이버결제
+## 프로젝트: pg를 적용한다. mock 객체(네트워크 통신x)로..
+---
+## order.place(authenticationResult.paymentKey());
+- 도메인에서는 주문을 한다만 place로 정의하지만 내부적으로 결제가 이루어진다.
+- order.place pg사 결제 처리 / orderRepo.save 주문 정보 처리: 주문과 결제라는 역할이 분리되어 있다.
+## EventPublisher.publish(new OrderPlacedEvent(paymentKey, orderNo, totalAmount));
+- 서비스에 결제 인증/승인 요청을 바로 하지 않고 EventPublisher를 뒀다.
+- Order과 결제가 강하게 결합되지 않도록 중간 객체를 둬서 역할을 분리한다. (Order는 이벤트 발행해달라고 했지만 이벤트 처리를 어떤 클래스가 하는지는 모른다.)
+- 이벤트 기반 개발 방식이라고 한다.
+## OrderPlacedEvent.class가 발행되었으면 해당 메서드를 수행하라는 의미
+```java
+@TransactionalEventListener(
+            classes = OrderPlacedEvent.class,
+            phase = TransactionPhase.AFTER_COMMIT
+    )
+```
+- orderRepo.save할 때 주문 정보 저장할 때 트랜잭션이 발생.. 트랜잭션 커밋하면 해당 메서드가 실행된다. (placeOrder가 @Transactional로 선언되었다)
+---
+### Order
+- getOrderNo() OrderNo
+- getTotalAmount() Money
+- getOrderState() State
+- getOrderDate() LocalDateTime
+- getOrderItems() List<OrderItem>
+- getWaitingNo() int
+- calculateTotalAmount(List<OrderItem>) Money
+- place(String) void
+- validateOrderItems(List<OrderItem>) List<OrderItem>
+- validateWaitingNo(int) int
+- validateOrderDate(LocalDateTime) LocalDateTime
+- validateAtLeastOneOrderItem(List<OrderItem>) void
+- validateOrderState(State) State
+### OrderPlaceService
+- placeOrder(OrderRequest) Order
+- toOrderItems(OrderRequest) List<OrderItem>
+### OrderPlacedEventHandler
+- handle(OrderPaidEvent) void
+### PaymentRequestService
+- requestPaymentAuthentication(OrderNo, Money) PaymentAuthenticateResult
+- requestPaymentApproval(String, OrderNo, Money) PaymentApproveResult
+### PaymentRegisterService
+- registerPayment(Payment) void
+### PaymentHttpService
+- postPaymentApproval(PaymentApproveRequest) PaymentApproveResult
+- postPaymentAuthentication(PaymentAuthenticationRequest) PaymentAuthenticateResult
+### PaymentRepository
+- save(Paymnet) Payment
+- findById(long) Payment
+### 이벤트 퍼블리셔
+---
+- 오더 플레이스 서비스는 페이먼트 리퀘스트 서비스에 placOrder->requestPaymentAuthentication으로 인증을 요청한다.
+- 인증 통과하면 Order 도메인 클래스에서 place 메서드를 호출해 주문을 접수한다.
+- place 메서드에서 이벤트를 발행한다.
+- --여기까지는 메서드 호출로 연결되어 있는 강한 결합이다.
+- 이벤트 퍼블리셔가 오더 플레이스드 이벤트 핸들러의 핸들 메서드를 직접 호출은 안 한다.
+- 이벤트 핸들러가 리스닝을 하고 있다가 이벤트가 발행됨을 감지하면 핸들 메서드가 호출된다.
+- handle 메서드에서는 페이먼트 리퀘스트 서비스의 requestPaymentApproval를 호출해서 결제 승인을 요청한다.
+- 페이먼트 리퀘스트 서비스는 PG사의 어떤 서버에 http 통신으로 결제 승인 요청 정보를 전송해야 한다.
+- 페이먼트 http 서비스로 http 통신을 한다: postPaymentApproval(); (앞서 인증은 postPaymentAuthentication()을 했다.)
+- 결제 승인이 되면 handle 메서드는 Payment Register Service에 registerPayment 메서드를 호출한다.
+- 레지스터 서비스는 리포지토리의 save를 호출한다.
+---
+- MenuWithItemsRowMapper는 조인된 테이블에서 발생하는 메뉴 데이터 중복을 처리하고, 'menuItems'와 같이 DB 컬럼에 직접 없는 멤버 변수를 포함하는 복합 객체를 매핑하기 위해 사용됩니다. 이를 통해 단일 Menu 객체에 여러 MenuItem 객체를 올바르게 포함시킬 수 있습니다.
+- 도메인 주도 설계(DDD)는 도메인 객체가 자신의 규칙과 불변성을 스스로 관리하고 검증해야 한다고 강조합니다. 이는 객체 생성 시점부터 데이터 무결성을 보장하는 핵심 원칙입니다.
+- 주문 도메인은 주문 완료 이벤트를 발행하고, 결제 도메인은 이 이벤트를 구독하여 결제 처리를 진행합니다. 이를 통해 두 도메인은 서로의 구현에 직접 의존하지 않고 느슨하게 연결됩니다.
+---
