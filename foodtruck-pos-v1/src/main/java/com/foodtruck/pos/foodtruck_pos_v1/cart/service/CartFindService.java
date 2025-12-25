@@ -9,8 +9,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class CartFindService {
     private final CartRepository cartRepository;
+    private final CartFindService cartFindService;
 
     public Cart findCartBy(int cartId) {
-        return null;
+        return cartFindService.findCartBy(cartId);
     }
 }

@@ -24,7 +24,14 @@ public class OrderHandler {
     private final OrderSalesQueryService orderSalesQueryService;
 
     public OrderResult requestOrder(OrderRequest orderRequest) {
-        return null;
+        Order placedOrder = orderPlaceService.placeOrder(orderRequest);
+        return new OrderResult(
+                placedOrder.getOrderNo(),
+                placedOrder.getOrderDate(),
+                placedOrder.getOrderItems(),
+                placedOrder.getTotalAmount(),
+                placedOrder.getWaitingNo()
+        );
     }
     public void updateOrderState(String endOrderNo, Order.State orderState) {
 

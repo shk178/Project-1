@@ -10,6 +10,6 @@ public class CartClearService {
     private final CartRepository cartRepository;
 
     public void clearCartBy(int cartId) {
-
+        cartRepository.clear(cartId);
     }
 }

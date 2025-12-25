@@ -78,6 +78,7 @@ public class UserKiosk implements ApplicationRunner {
                  * 2. 예외 메시지 출력
                  * 3. while문 종료
                  */
+                userCartScreen.clearCart();
                 println(ex.getMessage());
                 println();
                 completion = true;

@@ -1,8 +1,15 @@
 package com.foodtruck.pos.foodtruck_pos_v1.ui.user.menu.screen;
 
+import com.foodtruck.pos.foodtruck_pos_v1.cart.dto.CartItemResult;
+import com.foodtruck.pos.foodtruck_pos_v1.cart.dto.CartResult;
 import com.foodtruck.pos.foodtruck_pos_v1.menu.domain.Menu;
 import com.foodtruck.pos.foodtruck_pos_v1.menu.handler.MenuHandler;
 import com.foodtruck.pos.foodtruck_pos_v1.menuitem.domain.MenuItem;
+import com.foodtruck.pos.foodtruck_pos_v1.order.domain.OrderItem;
+import com.foodtruck.pos.foodtruck_pos_v1.order.dto.OrderFood;
+import com.foodtruck.pos.foodtruck_pos_v1.order.dto.OrderRequest;
+import com.foodtruck.pos.foodtruck_pos_v1.order.dto.OrderResult;
+import com.foodtruck.pos.foodtruck_pos_v1.order.handler.OrderHandler;
 import com.foodtruck.pos.foodtruck_pos_v1.ui.Screen;
 import com.foodtruck.pos.foodtruck_pos_v1.ui.common.exception.BackToPreviousScreenException;
 import com.foodtruck.pos.foodtruck_pos_v1.ui.user.UserScreenContent;
@@ -16,11 +23,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.foodtruck.pos.foodtruck_pos_v1.ui.common.helper.iohandler.ConsoleInputHandler.inputValue;
+import static com.foodtruck.pos.foodtruck_pos_v1.ui.common.helper.printer.ConsolePrinter.printf;
 import static com.foodtruck.pos.foodtruck_pos_v1.ui.common.helper.printer.ConsolePrinter.println;
 
 @RequiredArgsConstructor
@@ -30,6 +40,7 @@ public class UserMenuScreen extends Screen {
     private final UserCartScreen userCartScreen;
     private final MenuHandler menuHandler;
     private int menuItemCount;
+    private final OrderHandler orderHandler;
 
     @PostConstruct
     public void init() {
@@ -146,12 +157,21 @@ public class UserMenuScreen extends Screen {
          * 2. 카트 클리어
          * 3. 주문 처리 결과 출력
          */
+        OrderResult orderResult = orderWithCartItem();
+        if (Objects.nonNull(orderResult)) {
+            userCartScreen.clearCart();
+            println("주문 완료");
+            printOrderDetails(orderResult);
+        }
     }
 
     private void abortOrderProcess() {
         /**
          * 카트 클리어
          */
+        userCartScreen.clearCart();
+        println("# 주문 취소");
+        println();
     }
 
     private String getUpdatedBodyContent(List<MenuItem> menuItems) {
@@ -163,6 +183,62 @@ public class UserMenuScreen extends Screen {
                         menuItem.getMenuItemName(),
                         menuItem.getPrice()
                 ))
+                .collect(Collectors.joining("\n"));
+    }
+
+    private OrderResult orderWithCartItem() {
+        /**
+         * 1. 카드 조회
+         * 2. CartItem을 OrderFood로 변환
+         * 3. OrderRequest 객체 생성
+         * 4. OrderHandler에 주문 요청
+         */
+        try {
+            CartResult cartResult = userCartScreen.getCart();
+            List<OrderFood> orderFoods = convertCartItemsToOrderFoods(cartResult.cartItemResults());
+            OrderRequest orderRequest = new OrderRequest(orderFoods);
+            return orderHandler.requestOrder(orderRequest);
+        } catch (Exception ex) {
+            /**
+             * 1. 카트 클리어
+             * 2. 결제 요청 실패 등 주문 예외 rethrow
+             */
+            userCartScreen.clearCart();
+            throw new OrderFailedException();
+        }
+        return null;
+    }
+
+    private List<OrderFood> convertCartItemsToOrderFoods(List<CartItemResult> cartItemResults) {
+        return cartItemResults.stream()
+                .map(cartItemResult ->
+                        new OrderFood(cartItemResult.menuItemId(), cartItemResult.quantity()))
+                .toList();
+    }
+
+    private void printOrderDetails(OrderResult orderResult) {
+        String orderItemContent = renderOrderItemContent(orderResult.orderItems());
+        println("***");
+        println("주문 내역");
+        printf("주문 번호: %s\n", orderResult.orderNo().number());
+        printf("주문 일시: %s\n", orderResult.orderDate().format(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss")
+        ));
+        println(orderItemContent);
+        printf("결제 금액: %d원\n", orderResult.totalAmount().value());
+        printf("주문 대기 번호: %s\n", orderResult.waitingNo());
+        println("***");
+    }
+
+    private String renderOrderItemContent(List<OrderItem> orderItems) {
+        return orderItems.stream()
+                .map(orderItem ->
+                        String.format("%15s | %2d개 | %6d원",
+                                orderItem.getOrderItemName(),
+                                orderItem.getQuantity(),
+                                orderItem.getAmount().value()
+                        )
+                )
                 .collect(Collectors.joining("\n"));
     }
 }

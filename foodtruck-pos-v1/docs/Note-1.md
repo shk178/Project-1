@@ -357,3 +357,52 @@ return jdbcClient
 ```
 - new MenuWithItemsRowMapper() 대신 Menu.class로 해보았다. menuItems라는 멤버 변수가 맵핑이 안 된다.
 - Menu가 필드로 가지는 menuItems는 리스트.. rowMapper가 필요하다.
+---
+## CartItem를 class 아닌 record
+- 메뉴 아이템 객체 참조, 음식 수량만 필드로 가진다.
+- 별도의 도메인 로직을 수행하지 않는다. Value Object 값 객체로서만 사용된다.
+## SingletonCartFactory
+- 카트 객체는 하나만 있으면 되니까 싱글톤으로 구현
+- CART_ID를 고정
+## existingItem.equals(newItem)
+```java
+CartItem updatedCartItem = updateCartItemQuantity(newItem);
+            cartItemList.remove(newItem);
+            cartItemList.add(updatedCartItem);
+```
+- 같기 때문에 newItem을 remove하면 existingItem이 remove된다.
+- 같다는 건 필드 중에 menuItemId만 같다는 걸 말한다. (직접 equals 작성 필요, record여도 작성 가능)
+## menuItemId == menuItemId 대신 Objects.equals(,)
+- null-safe한 방법이라서 그렇다.
+## cart save
+```java
+    @Override
+    public void save(Cart cart) {
+        // 싱글톤이어서 저장 안 해도 된다.
+    }
+```
+- foundCart.addCartItem(cartItem)에서 이미 추가되었다.
+## Cart foundCart = cartRepository.findById(cartId);
+- repo로 바로 조회해도 되지만 CartFindService가 repo.findById를 이미 쓰고 있다.
+- CartItemAddService에서는 CartFindService로 조회하도록 바꾸자.
+## orderItemName OrderItem에 추가, 빌더 재정의
+- menuItemId로 테이블에서 메뉴 아이템 정보 조회해서 주문 아이템 만들어야 된다.
+## Order 생성 시 유효성 검증이 필요한 이유
+- OrderPlaceService가 아니더라도 Order 객체를 생성할 수 있어서 검증한다.
+- 도메인 객체에서 생성할 때 유효성을 검증하는 것 (도메인 객체에 규칙이 있기 때문에): 도메인 위주 개발 방식 스타일 (해당 도메인 객체를 안심하고 쓸 수 있다.)
+- orderNo는 생성할 때 체크하도록 생성자를 만들었다. orderNo 형식에 맞는지까지 체크를 하는 것이 권장된다. (컴팩트 생성자라고 해서 검증하고 나서 파라미터 값을 필드에 저장한다.)
+## CollectionUtils.isEmpty(orderItems)
+- 여기서 null 확인을 하지만 필수임을 드러내려고 Objects.requireNotNull을 썼다.
+## OrderRepoImpl에서 Service.save -> Repo.save(여기서 update 또는 insert)
+- 도메인 관점에서 설계 진행, 구현하기 때문이다.
+- 도메인 관점에서는 도메인 레이어에서 어떻게 로직을 작성할 것인가만 보고 인프라스트럭처 레이어에서 어떤 식으로 데이터를 처리하는지는 안 본다.
+- 도메인을 데이터베이스에 저장해달라고 요청을 하지, 새로운 주문이니까 인서트/새로운 주문이 아니니까 업데이트 이런 구체적인 요청이 아니다.
+- 즉 도메인과 인프라스트럭처 레이어의 관심사를 분리한다. 도메인은 save라는 추상화만 보고 구체 동작은 repo에 위임한다.
+- db에는 인서트+업데이트 한 번에 처리하는 업서트라는 게 있다. 이걸 세이브 메서드에서 업서트 쿼리로 바로 써도 되는데 인서트, 업데이트로 나누어 둔 이유는 모든 db의 업서트 쿼리문이 동일하지는 않기 때문이다.
+- db 종속을 줄이려고 인서트, 업데이트를 나눠서 처리했다.
+## Repo.save에서 return order;하는 이유
+- 파라미터로 넘어온 order에는 UI 출력 정보들이 모두 포함돼있다.
+- db에서 오더 정보를 가져와서 UI로 전달하는 것보다 효율적이다.
+## orderItems.forEach 대신 배치도 가능
+- jdbcTemplate에서는 지원된다.
+## printOrderDetails를 템플릿으로 작성해도 된다.
