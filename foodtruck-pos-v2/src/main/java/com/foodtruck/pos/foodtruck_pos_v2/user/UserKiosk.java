@@ -2,6 +2,7 @@ package com.foodtruck.pos.foodtruck_pos_v2.user;
 
 import com.foodtruck.pos.foodtruck_pos_v2.common.ExitApplicationException;
 import com.foodtruck.pos.foodtruck_pos_v2.common.RestartSessionException;
+import com.foodtruck.pos.foodtruck_pos_v2.common.Screen;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -14,10 +15,7 @@ import static com.foodtruck.pos.foodtruck_pos_v2.common.ConsolePrintHelper.cpl;
 @RequiredArgsConstructor
 @Component
 public class UserKiosk implements ApplicationRunner {
-    private final UserCartScreen userCartScreen;
-    private final UserMenuScreen userMenuScreen;
-    private final UserOrderScreen userOrderScreen;
-    private final UserPaymentScreen userPaymentScreen;
+    private final UserMainScreen userMainScreen;
     @Override
     public void run(ApplicationArguments args) throws Exception {
         cpl("사용자 키오스크를 시작합니다.");
@@ -35,6 +33,10 @@ public class UserKiosk implements ApplicationRunner {
         }
     }
     private void runUserSession() {
-
+        Screen currentScreen = userMainScreen;
+        while (true) {
+            currentScreen.render();
+            currentScreen = currentScreen.handleInput();
+        }
     }
 }

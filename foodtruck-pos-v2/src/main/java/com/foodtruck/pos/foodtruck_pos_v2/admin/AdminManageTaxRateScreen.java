@@ -4,33 +4,33 @@ import com.foodtruck.pos.foodtruck_pos_v2.authentication.AuthenticationHandler;
 import com.foodtruck.pos.foodtruck_pos_v2.common.ExitApplicationException;
 import com.foodtruck.pos.foodtruck_pos_v2.common.Screen;
 import com.foodtruck.pos.foodtruck_pos_v2.common.ScreenTemplate;
-import com.foodtruck.pos.foodtruck_pos_v2.order.OrderHandler;
+import com.foodtruck.pos.foodtruck_pos_v2.tax.TaxHandler;
 import lombok.RequiredArgsConstructor;
 
 import static com.foodtruck.pos.foodtruck_pos_v2.common.ConsolePrintHelper.cpl;
 
 @RequiredArgsConstructor
-public class AdminManageOrderScreen extends ScreenTemplate {
+public class AdminManageTaxRateScreen extends ScreenTemplate {
     private final AuthenticationHandler authenticationHandler;
-    private final AdminOrderScreen adminOrderScreen;
-    private final OrderHandler orderHandler;
+    private final AdminTaxScreen adminTaxScreen;
+    private final TaxHandler taxHandler;
     @Override
     protected void printContent() {
         cpl("[ 관리자: " + authenticationHandler.getLoginId() + " ]");
-        cpl("[ 주문 추가/수정/삭제 ]");
-        readOrders();
-        cpl("1. 주문 추가");
-        cpl("2. 주문 수정");
-        cpl("3. 주문 삭제");
+        cpl("[ 세율 추가/수정/삭제 ]");
+        readTaxRates();
+        cpl("1. 세율 추가");
+        cpl("2. 세율 수정");
+        cpl("3. 세율 삭제");
         cpl("4. 종료");
         cpl("입력하세요 (뒤로가기: :q)");
     }
     @Override
     protected Screen processInput(String input) {
         return switch (input) {
-            case "1" -> createOrder();
-            case "2" -> updateOrder();
-            case "3" -> deleteOrder();
+            case "1" -> createTaxRate();
+            case "2" -> updateTaxRate();
+            case "3" -> deleteTaxRate();
             case "4" -> throw new ExitApplicationException();
             default -> {
                 cpl("잘못된 입력입니다.");
@@ -40,24 +40,24 @@ public class AdminManageOrderScreen extends ScreenTemplate {
     }
     @Override
     protected Screen getPreviousScreen() {
-        return adminOrderScreen;
+        return adminTaxScreen;
     }
-    private void readOrders() {
-        orderHandler.readOrders();
+    private void readTaxRates() {
+        taxHandler.readTaxRates();
     }
-    private Screen createOrder() {
-        orderHandler.createOrder();
-        cpl("주문이 추가됐습니다.");
+    private Screen createTaxRate() {
+        taxHandler.createTaxRate();
+        cpl("세율이 추가됐습니다.");
         return this;
     }
-    private Screen updateOrder() {
-        orderHandler.updateOrder();
-        cpl("주문이 수정됐습니다.");
+    private Screen updateTaxRate() {
+        taxHandler.updateTaxRate();
+        cpl("세율이 수정됐습니다.");
         return this;
     }
-    private Screen deleteOrder() {
-        orderHandler.deleteOrder();
-        cpl("주문이 삭제됐습니다.");
+    private Screen deleteTaxRate() {
+        taxHandler.deleteTaxRate();
+        cpl("세율이 삭제됐습니다.");
         return this;
     }
 }

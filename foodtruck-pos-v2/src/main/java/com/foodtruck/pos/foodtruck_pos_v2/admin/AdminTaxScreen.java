@@ -9,31 +9,26 @@ import lombok.RequiredArgsConstructor;
 import static com.foodtruck.pos.foodtruck_pos_v2.common.ConsolePrintHelper.cpl;
 
 @RequiredArgsConstructor
-public class AdminMainScreen extends ScreenTemplate {
+public class AdminTaxScreen extends ScreenTemplate {
     private final AuthenticationHandler authenticationHandler;
-    private final AdminAuthenticationScreen adminAuthenticationScreen;
-    private final AdminMenuScreen adminMenuScreen;
-    private final AdminOrderScreen adminOrderScreen;
-    private final AdminPaymentScreen adminPaymentScreen;
-    private final AdminTaxScreen adminTaxScreen;
+    private final AdminMainScreen adminMainScreen;
+    private final AdminManageTaxRateScreen adminManageTaxRateScreen;
+    private final AdminGenerateTaxReportScreen adminGenerateTaxReportScreen;
     @Override
     protected void printContent() {
         cpl("[ 관리자: " + authenticationHandler.getLoginId() + " ]");
-        cpl("1. 메뉴 관리");
-        cpl("2. 주문 관리");
-        cpl("3. 결제 관리");
-        cpl("4. 세무 관리");
-        cpl("5. 종료");
+        cpl("[ 세무 관리 ]");
+        cpl("1. 세율 추가/수정/삭제");
+        cpl("2. 세무 보고서 생성");
+        cpl("3. 종료");
         cpl("입력하세요 (뒤로가기: :q)");
     }
     @Override
     protected Screen processInput(String input) {
         return switch (input) {
-            case "1" -> adminMenuScreen;
-            case "2" -> adminOrderScreen;
-            case "3" -> adminPaymentScreen;
-            case "4" -> adminTaxScreen;
-            case "5" -> throw new ExitApplicationException();
+            case "1" -> adminManageTaxRateScreen;
+            case "2" -> adminGenerateTaxReportScreen;
+            case "3" -> throw new ExitApplicationException();
             default -> {
                 cpl("잘못된 입력입니다.");
                 yield this;
@@ -42,6 +37,6 @@ public class AdminMainScreen extends ScreenTemplate {
     }
     @Override
     protected Screen getPreviousScreen() {
-        return adminAuthenticationScreen;
+        return adminMainScreen;
     }
 }

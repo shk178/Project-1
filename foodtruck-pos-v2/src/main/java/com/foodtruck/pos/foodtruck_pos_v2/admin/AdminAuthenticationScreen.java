@@ -44,10 +44,10 @@ public class AdminAuthenticationScreen extends ScreenTemplate {
         cp("Password: ");
         String password = ci();
         if (authenticationHandler.login(loginId, password)) {
-            cpl("로그인 성공");
+            cpl("로그인에 성공했습니다.");
             return adminMenuScreen;
         } else {
-            cpl("로그인 실패");
+            cpl("로그인에 실패했습니다.");
             return this;
         }
     }
